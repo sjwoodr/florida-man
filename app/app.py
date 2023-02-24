@@ -4,14 +4,19 @@ import re
 import requests
 from bs4 import BeautifulSoup
 import os
+from cachetools import cached, TTLCache
+
 
 app = Flask(__name__)
-@app.route("/")
-def home():
+
+@cached(cache=TTLCache(maxsize=30, ttl=10))
+def get_news():
+    links = []
+    print("Fetching Florida Man News as the cache is expired ...")
     url = 'https://floridanewsheadlines.com/articles/florida-man/'
     r = requests.get(url)
     html_page = r.text
-    links = []
+
     soup = BeautifulSoup(html_page, "html.parser")
     for link in soup.findAll('a'):
         pattern = 'articles\/\d+$'
@@ -21,6 +26,12 @@ def home():
             #print(link.get('href'))
             #print(link.get('title'))
             links.append(link.get('title'))
+    return links
+
+
+@app.route("/")
+def home():
+    links = get_news()
     randomLine = random.choice(links)
     return render_template("home.html", fact=randomLine, secret_env_test="")
 
